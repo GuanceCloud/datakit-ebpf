@@ -27,7 +27,7 @@ import (
 	"github.com/jessevdk/go-flags"
 	"github.com/shirou/gopsutil/process"
 
-	dkhttpflow "github.com/GuanceCloud/datakit-ebpf/internal/httpflow"
+	dkl7flow "github.com/GuanceCloud/datakit-ebpf/internal/l7flow"
 
 	"github.com/GuanceCloud/datakit-ebpf/internal/k8sinfo"
 	dknetflow "github.com/GuanceCloud/datakit-ebpf/internal/netflow"
@@ -174,7 +174,7 @@ func main() { //nolint:funlen
 	dkdns.SetLogger(l)
 	dkoffset.SetLogger(l)
 	dkbash.SetLogger(l)
-	dkhttpflow.SetLogger(l)
+	dkl7flow.SetLogger(l)
 	dksysmonitor.SetLogger(l)
 
 	// duration is between 10s and 30min, if not, take the boundary value.
@@ -276,7 +276,7 @@ func main() { //nolint:funlen
 		} else {
 			go k8sinfo.AutoUpdate(ctx)
 			dknetflow.SetK8sNetInfo(k8sinfo)
-			dkhttpflow.SetK8sNetInfo(k8sinfo)
+			dkl7flow.SetK8sNetInfo(k8sinfo)
 			dkdns.SetK8sNetInfo(k8sinfo)
 		}
 
@@ -384,7 +384,7 @@ func main() { //nolint:funlen
 			if dkout.DataKitTraceServer != "" {
 				traceSvc = fmt.Sprintf("http://%s%s", dkout.DataKitTraceServer, "/v1/bpftracing")
 			}
-			tracer := dkhttpflow.NewHTTPFlowTracer(gTags, fmt.Sprintf("http://%s%s?input=",
+			tracer := dkl7flow.NewHTTPFlowTracer(gTags, fmt.Sprintf("http://%s%s?input=",
 				dkout.DataKitAPIServer, point.Network.URL())+url.QueryEscape(inputNameNetHTTP),
 				traceSvc, conv2ddID, enableTrace, procFilter,
 			)

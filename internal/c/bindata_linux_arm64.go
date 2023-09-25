@@ -8,41 +8,41 @@ import (
 	"embed"
 )
 
-//go:embed bin/arm64
+//go:embed elf/linux_arm64
 var binData embed.FS
 
 func HTTPFlowBin() ([]byte, error) {
-	return binData.ReadFile("bin/arm64/httpflow.o")
+	return binData.ReadFile("elf/linux_arm64/httpflow.o")
 }
 
 func NetFlowBin() ([]byte, error) {
-	return binData.ReadFile("bin/arm64/netflow.o")
+	return binData.ReadFile("elf/linux_arm64/netflow.o")
 }
 
 func ConntrackBin() ([]byte, error) {
-	return binData.ReadFile("bin/arm64/conntrack.o")
+	return binData.ReadFile("elf/linux_arm64/conntrack.o")
 }
 
 func ProcessSchedBin() ([]byte, error) {
-	return binData.ReadFile("bin/arm64/process_sched.o")
+	return binData.ReadFile("elf/linux_arm64/process_sched.o")
 }
 
 func OffsetGuessBin() ([]byte, error) {
-	return binData.ReadFile("bin/arm64/offset_guess.o")
+	return binData.ReadFile("elf/linux_arm64/offset_guess.o")
 }
 
 func OffsetHttpflowBin() ([]byte, error) {
-	return binData.ReadFile("bin/arm64/offset_httpflow.o")
+	return binData.ReadFile("elf/linux_arm64/offset_httpflow.o")
 }
 
 func OffsetConntrackBin() ([]byte, error) {
-	return binData.ReadFile("bin/arm64/offset_conntrack.o")
+	return binData.ReadFile("elf/linux_arm64/offset_conntrack.o")
 }
 
 func OffsetTCPSeqBin() ([]byte, error) {
-	return binData.ReadFile("bin/arm64/offset_tcp_seq.o")
+	return binData.ReadFile("elf/linux_arm64/offset_tcp_seq.o")
 }
 
 func BashHistoryBin() ([]byte, error) {
-	return binData.ReadFile("bin/arm64/bash_history.o")
+	return binData.ReadFile("elf/linux_arm64/bash_history.o")
 }

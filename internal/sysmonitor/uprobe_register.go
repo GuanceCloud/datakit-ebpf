@@ -2,11 +2,8 @@ package sysmonitor
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/binary"
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -14,38 +11,8 @@ import (
 
 	manager "github.com/DataDog/ebpf-manager"
 	"github.com/DataDog/gopsutil/process/so"
-	"github.com/GuanceCloud/cliutils/logger"
+	pr "github.com/shirou/gopsutil/v3/process"
 )
-
-var l = logger.DefaultSLogger("ebpf")
-
-func SetLogger(nl *logger.Logger) {
-	l = nl
-}
-
-func diff(old, cur map[string]struct{}) (map[string]struct{}, map[string]struct{}) {
-	add := map[string]struct{}{}
-	del := map[string]struct{}{}
-	for k := range cur {
-		if _, ok := old[k]; !ok {
-			add[k] = struct{}{}
-		}
-	}
-
-	for k := range old {
-		if _, ok := cur[k]; !ok {
-			del[k] = struct{}{}
-		}
-	}
-
-	return del, add
-}
-
-func ShortID(binPath string) string {
-	sha1Val := sha256.Sum256([]byte(binPath))
-	return strconv.FormatUint(
-		binary.BigEndian.Uint64(sha1Val[:]), 36)
-}
 
 type UprobeRegRule struct {
 	Re         *regexp.Regexp
@@ -53,7 +20,36 @@ type UprobeRegRule struct {
 	UnRegister func(string) error
 }
 
-type UprobeProcessRegister struct{}
+type UprobeConf struct {
+	AttachDynamicLib bool
+	DynamicLibName   *regexp.Regexp
+
+	FuncName           string
+	UprobeProgFuncName string
+}
+type ProcessUprobeRegister struct {
+	manager *manager.Manager
+	Symbols []UprobeConf
+
+	DynamicLibs              []UprobeConf
+	AttchDynamicLibOrProcess bool
+
+	// binpathAttached map[string]bool
+}
+
+func (reg *ProcessUprobeRegister) Register(p *pr.Process) {
+
+}
+
+func (reg *ProcessUprobeRegister) Unregister() {
+
+}
+
+func NewProcessUProbeRegister(m *manager.Manager) *ProcessUprobeRegister {
+	return &ProcessUprobeRegister{
+		manager: m,
+	}
+}
 
 func NewUprobeDyncLibRegister(rules []UprobeRegRule) (*UprobeRegister, error) {
 	r := &UprobeRegister{}

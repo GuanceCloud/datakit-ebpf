@@ -1,5 +1,11 @@
 package sysmonitor
 
+import (
+	"debug/elf"
+	"regexp"
+	"testing"
+)
+
 // func TestFindOffset(t *testing.T) {
 // 	{
 // 		goBin := []string{}
@@ -95,3 +101,23 @@ package sysmonitor
 // 		}
 // 	}
 // }
+
+func TestSym(t *testing.T) {
+	fp := "/home/vircoys/go/src/github.com/GuanceCloud/datakit-ebpf/dist/amd64/datakit-ebpf"
+	f, err := elf.Open(fp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, err := FindDynamicSymbol(f, regexp.MustCompile("^pthread"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Error(s)
+
+	s1, err := FindSymbol(f, regexp.MustCompile("a"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Error(s1)
+
+}

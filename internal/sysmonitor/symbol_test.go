@@ -2,7 +2,6 @@ package sysmonitor
 
 import (
 	"debug/elf"
-	"regexp"
 	"testing"
 )
 
@@ -108,16 +107,9 @@ func TestSym(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := FindDynamicSymbol(f, regexp.MustCompile("^pthread"))
+	s, err := FindDynamicSymbol(f, "pthread_create")
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Error(s)
-
-	s1, err := FindSymbol(f, regexp.MustCompile("a"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Error(s1)
-
 }

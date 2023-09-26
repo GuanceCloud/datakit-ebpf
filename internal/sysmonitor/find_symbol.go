@@ -16,13 +16,13 @@ import (
 
 var goVersionRe = regexp.MustCompile(`^go(\d+)\.(\d+)`)
 
-func FindSymbol(elfFile *elf.File, re *regexp.Regexp) ([]elf.Symbol, error) {
+func FindSymbol(elfFile *elf.File, fnName string) ([]elf.Symbol, error) {
 	if syms, err := elfFile.Symbols(); err != nil {
 		return nil, fmt.Errorf("failed to obtain symbol table: %w", err)
 	} else {
 		var matched []elf.Symbol
 		for _, s := range syms {
-			if elf.ST_TYPE(s.Info) == elf.STT_FUNC && re.MatchString(s.Name) {
+			if elf.ST_TYPE(s.Info) == elf.STT_FUNC && s.Name == fnName {
 				matched = append(matched, s)
 			}
 		}
@@ -31,13 +31,13 @@ func FindSymbol(elfFile *elf.File, re *regexp.Regexp) ([]elf.Symbol, error) {
 	}
 }
 
-func FindDynamicSymbol(elfFile *elf.File, re *regexp.Regexp) ([]elf.Symbol, error) {
+func FindDynamicSymbol(elfFile *elf.File, fnName string) ([]elf.Symbol, error) {
 	if syms, err := elfFile.DynamicSymbols(); err != nil {
 		return nil, fmt.Errorf("failed to obtain symbol table: %w", err)
 	} else {
 		var matched []elf.Symbol
 		for _, s := range syms {
-			if elf.ST_TYPE(s.Info) == elf.STT_FUNC&0xF && re.MatchString(s.Name) {
+			if elf.ST_TYPE(s.Info) == elf.STT_FUNC&0xF && s.Name == fnName {
 				matched = append(matched, s)
 			}
 		}

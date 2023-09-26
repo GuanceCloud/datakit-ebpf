@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"math"
 	"os"
-	"regexp"
 	"runtime"
 	"strings"
 	"sync"
@@ -353,7 +352,7 @@ func (tracer *SchedTracer) goProbeRegister(p *pr.Process) error {
 		return fmt.Errorf("nnable to open elf file %s: %w", exeResolvePath, err)
 	}
 
-	if syms, err := FindSymbol(elfFile, regexp.MustCompile(`^runtime\.execute$`)); err == nil {
+	if syms, err := FindSymbol(elfFile, "runtime.execute"); err == nil {
 		if len(syms) != 1 {
 			l.Debug("find symbol runtime.execute, exe %s, count %d", exeResolvePath, len(syms))
 			return nil

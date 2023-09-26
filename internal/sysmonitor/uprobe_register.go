@@ -2,6 +2,7 @@ package sysmonitor
 
 import (
 	"context"
+	"debug/elf"
 	"fmt"
 	"regexp"
 	"strings"
@@ -11,7 +12,6 @@ import (
 
 	manager "github.com/DataDog/ebpf-manager"
 	"github.com/DataDog/gopsutil/process/so"
-	pr "github.com/shirou/gopsutil/v3/process"
 )
 
 type UprobeRegRule struct {
@@ -22,32 +22,125 @@ type UprobeRegRule struct {
 
 type UprobeConf struct {
 	AttachDynamicLib bool
-	DynamicLibName   *regexp.Regexp
+	DynamicLibNameRe *regexp.Regexp
 
 	FuncName           string
 	UprobeProgFuncName string
 }
+
+type UprobeAttachTyp int32
+
+const (
+	AttachUnknown UprobeAttachTyp = iota
+	AttachProcess
+	AttachDynamicLib
+)
+
 type ProcessUprobeRegister struct {
-	manager *manager.Manager
-	Symbols []UprobeConf
-
-	DynamicLibs              []UprobeConf
-	AttchDynamicLibOrProcess bool
-
-	// binpathAttached map[string]bool
+	Manager                  *manager.Manager
+	ProgSymbols              []UprobeConf
+	DynamicLibSymbols        []UprobeConf
+	AttchDynamicLibOrProcess UprobeAttachTyp
+	ProbeIDPrefix            string
 }
 
-func (reg *ProcessUprobeRegister) Register(p *pr.Process) {
+type uprobeAttachArg struct {
+	binPath string
 
+	symbol       string
+	symbolOffset uint64
+
+	uprobeFunc string
 }
 
-func (reg *ProcessUprobeRegister) Unregister() {
+func (reg *ProcessUprobeRegister) Register(binPath string, dynamic bool) error {
+	if reg.Manager == nil {
+		return nil
+	}
 
+	var args []uprobeAttachArg
+	var err error
+
+	if dynamic {
+		args, err = getUpAttachArgs(binPath, reg.ProgSymbols)
+	} else {
+		args, err = getUpAttachArgs(binPath, reg.DynamicLibSymbols)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	for _, arg := range args {
+		shortid := ShortID(reg.ProbeIDPrefix, arg.binPath)
+		probeID := manager.ProbeIdentificationPair{
+			UID:          shortid,
+			EBPFFuncName: arg.uprobeFunc,
+		}
+
+		if err := reg.Manager.DetachHook(probeID); err != nil {
+			l.Error(err)
+		}
+
+		if err := reg.Manager.AddHook("", &manager.Probe{
+			ProbeIdentificationPair: probeID,
+			UprobeOffset:            arg.symbolOffset,
+			BinaryPath:              arg.binPath,
+		}); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
-func NewProcessUProbeRegister(m *manager.Manager) *ProcessUprobeRegister {
+func getUpAttachArgs(binPath string, conf []UprobeConf) ([]uprobeAttachArg, error) {
+	if len(conf) == 0 || binPath == "" {
+		return nil, nil
+	}
+
+	f, err := elf.Open(binPath)
+	if err != nil {
+		return nil, err
+	}
+	var upArgs []uprobeAttachArg
+	for _, conf := range conf {
+		if conf.AttachDynamicLib {
+			if conf.DynamicLibNameRe != nil {
+				if !conf.DynamicLibNameRe.MatchString(binPath) {
+					return nil, nil
+				}
+			}
+		}
+		if syms, err := FindSymbol(f, conf.FuncName); err != nil {
+			l.Debug(err)
+		} else {
+			for _, sym := range syms {
+				if sym.Section != elf.SHN_UNDEF {
+					upArgs = append(upArgs, uprobeAttachArg{
+						binPath:      binPath,
+						symbol:       sym.Name,
+						symbolOffset: sym.Value,
+						uprobeFunc:   conf.UprobeProgFuncName,
+					})
+				}
+			}
+		}
+	}
+
+	return upArgs, nil
+}
+
+func NewProcessUProbeRegister(m *manager.Manager, progSymConf, dlSymConf []UprobeConf, idPrefix ...string) *ProcessUprobeRegister {
+	var prefix string
+	if len(idPrefix) > 0 {
+		prefix = idPrefix[0]
+	}
 	return &ProcessUprobeRegister{
-		manager: m,
+		Manager:           m,
+		ProgSymbols:       progSymConf,
+		DynamicLibSymbols: dlSymConf,
+		ProbeIDPrefix:     prefix,
 	}
 }
 

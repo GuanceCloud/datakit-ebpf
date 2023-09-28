@@ -272,7 +272,7 @@ func (tracer *SchedTracer) ProcessSchedHandler(cpu int, data []byte,
 		}
 
 		if err := tracer.goProbeRegister(p); err != nil {
-			l.Debug(err)
+			l.Warn(err)
 		}
 	case SchedExit:
 		if tracer.processFilter != nil {
@@ -312,6 +312,8 @@ func (tracer *SchedTracer) goProbeRegister(p *pr.Process) error {
 	if exeResolvePath == "" {
 		return nil
 	}
+
+	exeResolvePath = HostRoot(exeResolvePath)
 
 	if tracer.processFilter != nil {
 		if !tracer.processFilter.Filter(int(pid), pname, exePath, envMap) {

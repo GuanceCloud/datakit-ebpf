@@ -80,3 +80,7 @@ func GetEnv(key string, dfault string, combineWith ...string) string {
 func HostProc(combineWith ...string) string {
 	return GetEnv("HOST_PROC", "/proc", combineWith...)
 }
+
+func HostRoot(combineWith ...string) string {
+	return GetEnv("HOST_ROOT", "/", combineWith...)
+}

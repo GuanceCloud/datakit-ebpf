@@ -17,6 +17,11 @@ type caseConnT struct {
 	result    bool
 }
 
+type measurement struct {
+	tags   map[string]string
+	fields map[string]interface{}
+}
+
 func TestConnFilter(t *testing.T) {
 	cases := []caseConnT{
 		{

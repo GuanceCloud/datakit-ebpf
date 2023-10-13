@@ -1,3 +1,4 @@
+// Package bashhistory collects bash history
 package bashhistory
 
 import (
@@ -172,11 +173,4 @@ func (tracer *BashTracer) Run(ctx context.Context, gTags map[string]string,
 		close(tracer.stopCh)
 	}()
 	return nil
-}
-
-type measurement struct {
-	name   string
-	tags   map[string]string
-	fields map[string]interface{}
-	ts     time.Time
 }

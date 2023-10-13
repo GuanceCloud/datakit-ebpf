@@ -1,10 +1,5 @@
 package sysmonitor
 
-import (
-	"debug/elf"
-	"testing"
-)
-
 // func TestFindOffset(t *testing.T) {
 // 	{
 // 		goBin := []string{}
@@ -101,15 +96,15 @@ import (
 // 	}
 // }
 
-func TestSym(t *testing.T) {
-	fp := "/home/vircoys/go/src/github.com/GuanceCloud/datakit-ebpf/dist/amd64/datakit-ebpf"
-	f, err := elf.Open(fp)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s, err := FindDynamicSymbol(f, "pthread_create")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Error(s)
-}
+// func TestSym(t *testing.T) {
+// 	fp := "/home/vircoys/go/src/github.com/GuanceCloud/datakit-ebpf/dist/amd64/datakit-ebpf"
+// 	f, err := elf.Open(fp)
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
+// 	s, err := FindDynamicSymbol(f, "pthread_create")
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
+// 	t.Log(s)
+// }

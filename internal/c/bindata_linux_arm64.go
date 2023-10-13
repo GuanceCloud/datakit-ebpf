@@ -1,5 +1,5 @@
-//go:build linux && arm64 && ebpf
-// +build linux,arm64,ebpf
+//go:build linux && arm64
+// +build linux,arm64
 
 // Package ebpf wraps eBPF-network's CGO extensions
 package ebpf

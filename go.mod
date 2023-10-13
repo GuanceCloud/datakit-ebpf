@@ -5,25 +5,26 @@ go 1.19
 require (
 	github.com/DataDog/ebpf-manager v0.2.16
 	github.com/DataDog/gopsutil v1.2.2
-	github.com/GuanceCloud/cliutils v0.1.4
+	github.com/GuanceCloud/cliutils v0.1.5-0.20231013070532-7c647d5a597d
 	github.com/cilium/ebpf v0.11.0
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da
 	github.com/google/gopacket v1.1.19
-	github.com/grafana/pyroscope/ebpf v0.2.1
+	github.com/grafana/pyroscope/ebpf v0.2.3
 	github.com/hashicorp/go-retryablehttp v0.7.4
-	github.com/influxdata/influxdb1-client v0.0.0-20200827194710-b269163b24ab
+	github.com/influxdata/influxdb1-client v0.0.0-20220302092344-a9ab5670611c
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/shirou/gopsutil v3.21.11+incompatible
-	github.com/shirou/gopsutil/v3 v3.23.8
+	github.com/shirou/gopsutil/v3 v3.23.9
 	github.com/spf13/cast v1.5.1
 	github.com/stretchr/testify v1.8.4
-	golang.org/x/net v0.13.0
-	golang.org/x/sys v0.11.0
+	golang.org/x/net v0.17.0
+	golang.org/x/sys v0.13.0
 	k8s.io/apimachinery v0.28.2
 	k8s.io/client-go v0.28.2
 )
 
 require (
+	github.com/BurntSushi/toml v1.3.2 // indirect
 	github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705 // indirect
 	github.com/aliyun/aliyun-oss-go-sdk v2.1.2+incompatible // indirect
 	github.com/avast/retry-go/v4 v4.1.0 // indirect
@@ -67,12 +68,12 @@ require (
 	github.com/vishvananda/netns v0.0.0-20200728191858-db3c7e526aae // indirect
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
-	go.uber.org/multierr v1.5.0 // indirect
-	go.uber.org/zap v1.15.0 // indirect
+	go.uber.org/multierr v1.6.0 // indirect
+	go.uber.org/zap v1.23.0 // indirect
 	golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1 // indirect
 	golang.org/x/oauth2 v0.8.0 // indirect
-	golang.org/x/term v0.10.0 // indirect
-	golang.org/x/text v0.11.0 // indirect
+	golang.org/x/term v0.13.0 // indirect
+	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect

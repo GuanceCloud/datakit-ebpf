@@ -3,11 +3,12 @@ package httpflow
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/GuanceCloud/datakit-ebpf/internal/k8sinfo"
-	"github.com/GuanceCloud/datakit-ebpf/internal/netflow"
+	dknetflow "github.com/GuanceCloud/datakit-ebpf/internal/netflow"
 	"github.com/GuanceCloud/datakit-ebpf/internal/tracing"
 	"github.com/GuanceCloud/datakit-ebpf/pkg/spanid"
 	client "github.com/influxdata/influxdb1-client/v2"
@@ -141,7 +142,7 @@ func ConnNotNeedToFilter(conn ConnectionInfo) bool {
 		conn.Sport == 0 || conn.Dport == 0 {
 		return false
 	}
-	if netflow.ConnAddrIsIPv4(conn.Meta) { // IPv4
+	if dknetflow.ConnAddrIsIPv4(conn.Meta) { // IPv4
 		if (conn.Saddr[3]&0xff) == 127 && (conn.Daddr[3]&0xff) == 127 {
 			return false
 		}
@@ -158,7 +159,9 @@ func ConnNotNeedToFilter(conn ConnectionInfo) bool {
 	return true
 }
 
-func CreateTracePoint(traceInfo *tracing.TraceInfo, httpStat *HTTPReqFinishedInfo) (*client.Point, error) {
+func CreateTracePoint(gtags map[string]string, traceInfo *tracing.TraceInfo,
+	httpStat *HTTPReqFinishedInfo,
+) (*client.Point, error) {
 	var threadTraceID int64
 	var reqSeq int64
 	var respSeq int64
@@ -210,6 +213,32 @@ func CreateTracePoint(traceInfo *tracing.TraceInfo, httpStat *HTTPReqFinishedInf
 		"recv_bytes":       httpStat.HTTPStats.Recv,
 		"send_bytes":       httpStat.HTTPStats.Send,
 		"message":          string(msg),
+	}
+
+	for k, v := range gtags {
+		if _, ok := fields[k]; !ok {
+			fields[k] = v
+		}
+	}
+
+	{
+		bk := getBaseKey(httpStat)
+
+		fields["src_ip"] = bk.SAddr
+		fields["dst_ip"] = bk.DAddr
+		if bk.DNATAddr != "" {
+			fields["dst_nat_port"] = strconv.FormatInt(int64(bk.DNATPort), 10)
+			fields["dst_nat_ip"] = bk.DNATAddr
+		}
+
+		fields["src_port"] = strconv.FormatInt(int64(bk.SPort), 10)
+		fields["dst_port"] = strconv.FormatInt(int64(bk.DPort), 10)
+		tags := dknetflow.AddK8sTags2Map(k8sNetInfo, &bk, map[string]string{})
+		for k, v := range tags {
+			if _, ok := fields[k]; !ok {
+				fields[k] = v
+			}
+		}
 	}
 
 	if traceInfo.HaveTracID {

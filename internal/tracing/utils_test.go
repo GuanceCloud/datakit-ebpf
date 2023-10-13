@@ -58,6 +58,8 @@ func TestParseHTTPHeader(t *testing.T) {
 			TraceID:      HexTraceid2ID128("464d5ff3a7c6ba32626b625cc201d9ee"),
 			ParentSpanID: HexSpanid2ID64("fb94ce3aa8b7363b"),
 			ASpanSampled: true,
+			HaveTracID:   true,
+			HexEncode:    true,
 			Headers: map[string]string{
 				"Host":            "10.200.7.127:23306",
 				"User-Agent":      "python-requests/2.31.0",
@@ -82,6 +84,7 @@ func TestParseHTTPHeader(t *testing.T) {
 			},
 			ParentSpanID: DecTraceOrSpanid2ID64("2939560723338402907"),
 			ASpanSampled: true,
+			HaveTracID:   true,
 			Headers: map[string]string{
 				"Host":            "10.200.7.127:23306",
 				"User-Agent":      "python-requests/2.31.0",
@@ -119,7 +122,8 @@ func TestParseHTTPHeader(t *testing.T) {
 				"traceparent":                 "00-464d5ff3a7c6ba32626b625cc201d9ee-28cb6ae746469c5b-01",
 				"tracestate":                  "dd=s:1;t.tid:464d5ff3a7c6ba32",
 			},
-			Param: "asdasd=1",
+			HaveTracID: true,
+			Param:      "asdasd=1",
 		}, *v)
 	}
 
@@ -131,6 +135,7 @@ func TestParseHTTPHeader(t *testing.T) {
 			Path:         "/rolldice",
 			Version:      "HTTP/1.1",
 			ASpanSampled: true,
+			HaveTracID:   false,
 			Headers: map[string]string{
 				"Host":       "10.200.7.127:23305",
 				"User-Agent": "curl/7.81.0",

@@ -249,3 +249,37 @@ func (agg *FlowAgg) ToPoint(tags map[string]string, k8sInfo *k8sinfo.K8sNetInfo)
 func (agg *FlowAgg) Clean() {
 	agg.data = make(map[aggKey]*aggValue)
 }
+
+func getBaseKey(httpFinReq *HTTPReqFinishedInfo) dknetflow.BaseKey {
+	bk := dknetflow.BaseKey{}
+
+	info := httpFinReq.ConnInfo
+	isV6 := !dknetflow.ConnAddrIsIPv4(info.Meta)
+
+	if info.Saddr[0] == 0 && info.Saddr[1] == 0 &&
+		info.Daddr[0] == 0 && info.Daddr[1] == 0 {
+		if info.Saddr[2] == 0xffff0000 && info.Daddr[2] == 0xffff0000 {
+			isV6 = false
+		} else if info.Saddr[2] == 0 && info.Daddr[2] == 0 &&
+			info.Saddr[3] > 1 && info.Daddr[3] > 1 {
+			isV6 = false
+		}
+	}
+
+	// fields["src_ip"]
+	bk.SAddr = dknetflow.U32BEToIP(info.Saddr, isV6).String()
+	// fields["dst_ip"]
+	bk.DAddr = dknetflow.U32BEToIP(info.Daddr, isV6).String()
+	if info.NATDport != 0 && (info.NATDaddr[0]|
+		info.NATDaddr[1]|info.NATDaddr[2]|info.NATDaddr[3]) != 0 {
+		// fields["dst_nat_port"]
+		bk.DNATPort = info.NATDport
+		// fields["dst_nat_ip"]
+		bk.DNATAddr = dknetflow.U32BEToIP(info.NATDaddr, isV6).String()
+	}
+
+	// fields["src_port"] =
+	bk.SPort = info.Sport
+	bk.DPort = info.Dport
+	return bk
+}

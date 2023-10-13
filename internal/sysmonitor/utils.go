@@ -55,7 +55,7 @@ func resolveBinPath(pid int, fpath string) string {
 }
 
 // GetEnv retrieves the environment variable key. If it does not exist it returns the default.
-// Copy from vendor/github.com/shirou/gopsutil/v3/internal/common/common.go:common.GetEnv
+// Copy from vendor/github.com/shirou/gopsutil/v3/internal/common/common.go:common.GetEnv.
 func GetEnv(key string, dfault string, combineWith ...string) string {
 	value := os.Getenv(key)
 	if value == "" {
@@ -76,7 +76,7 @@ func GetEnv(key string, dfault string, combineWith ...string) string {
 }
 
 // HostProc returns the value of the host proc path.
-// Context from vendor/github.com/shirou/gopsutil/v3/internal/common/common.go:common.HostProc
+// Context from vendor/github.com/shirou/gopsutil/v3/internal/common/common.go:common.HostProc.
 func HostProc(combineWith ...string) string {
 	return GetEnv("HOST_PROC", "/proc", combineWith...)
 }

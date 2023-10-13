@@ -86,12 +86,13 @@ type Option struct {
 
 	Service string `long:"service" description:"service" default:"ebpf"`
 
-	TraceServer          string `long:"trace-server" description:"eBPF trace generation server address"`
-	TraceAllProc         string `long:"trace-allprocess" description:"trace all processes directly" default:"false"`
-	TraceEnvSet          string `long:"trace-envset" description:"trace all processes containing any specified environment variable" default:""`
-	TraceProcNameDenySet string `long:"trace-namedenyset" description:"deny tracing all processes containing any specified process names" default:""`
-	TraceProcNameSet     string `long:"trace-nameset" description:"trace all processes containing any specified process names" default:""`
-	ConvTraceToDD        string `long:"conv-to-ddtrace" description:"conv trace id to ddtrace" default:"false"`
+	TraceServer        string `long:"trace-server" description:"eBPF trace generation server address"`
+	TraceAllProc       string `long:"trace-allprocess" description:"trace all processes directly" default:"false"`
+	TraceEnvList       string `long:"trace-env-list" description:"trace all processes containing any specified environment variable" default:""`
+	TraceNameList      string `long:"trace-name-list" description:"trace all processes containing any specified process names" default:""`
+	TraceEnvBlacklist  string `long:"trace-env-blacklist" description:"deny tracking any process containing any specified environment variable" default:""` //nolint:lll
+	TraceNameBlacklist string `long:"trace-name-blacklist" description:"deny tracking any process containing any specified process names" default:""`
+	ConvTraceToDD      string `long:"conv-to-ddtrace" description:"conv trace id to ddtrace" default:"false"`
 }
 
 //  Envs:
@@ -204,22 +205,33 @@ func main() { //nolint:funlen
 		default:
 		}
 
-		var envSet []string
-		for _, e := range strings.Split(opt.TraceEnvSet, ",") {
-			envSet = append(envSet, strings.TrimSpace(e))
+		envSet := map[string]bool{}
+		for _, e := range strings.Split(opt.TraceEnvList, ",") {
+			e = strings.TrimSpace(e)
+			if e != "" {
+				envSet[e] = true
+			}
 		}
+
+		for _, e := range strings.Split(opt.TraceEnvBlacklist, ",") {
+			e = strings.TrimSpace(e)
+			if e != "" {
+				envSet[e] = false
+			}
+		}
+
 		processSet := map[string]bool{}
 		processSet["datakit-ebpf"] = false
 		processSet["datakit"] = false
 
-		for _, p := range strings.Split(opt.TraceProcNameSet, ",") {
+		for _, p := range strings.Split(opt.TraceNameList, ",") {
 			p = strings.TrimSpace(p)
 			if p != "" {
 				processSet[p] = true
 			}
 		}
 
-		for _, p := range strings.Split(opt.TraceProcNameDenySet, ",") {
+		for _, p := range strings.Split(opt.TraceNameBlacklist, ",") {
 			p = strings.TrimSpace(p)
 			if p != "" {
 				processSet[p] = false

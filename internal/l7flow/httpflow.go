@@ -465,7 +465,7 @@ func (tracer *HTTPFlowTracer) feedHandler(ctx context.Context, interval time.Dur
 			}
 
 		case <-mergeTicker.C:
-			reqs, pts := _reqCache.MergeReq(eTrace, tracer.procFilter)
+			reqs, pts := _reqCache.MergeReq(tracer.gTags, eTrace, tracer.procFilter)
 			if err := feed(tracer.tracePostURL, pts); err != nil {
 				l.Error(err)
 			}

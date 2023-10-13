@@ -243,7 +243,7 @@ func HexSpanid2ID64(s string) spanid.ID64 {
 
 type ProcessFilter struct {
 	SvcAssignEnv []string
-	RuleEnv      []string
+	RuleEnv      map[string]bool
 
 	RuleProcessName map[string]bool
 	RulePath        map[string]bool
@@ -261,7 +261,7 @@ type ProcSvcInfo struct {
 	AllowTrace bool
 }
 
-func NewProcessFilter(svcAssignEnv []string, ruleEnv []string, ruleProcessName map[string]bool,
+func NewProcessFilter(svcAssignEnv []string, ruleEnv map[string]bool, ruleProcessName map[string]bool,
 	anyProcess, disable bool,
 ) *ProcessFilter {
 	return &ProcessFilter{
@@ -285,11 +285,18 @@ func (p *ProcessFilter) Filter(pid int, name, path string, env map[string]string
 
 	var filtered bool
 	for i := 0; i < 1; i++ {
-		for _, k := range p.RuleEnv {
+		for k, allow := range p.RuleEnv {
 			if _, ok := env[k]; ok {
-				filtered = true
+				if allow {
+					filtered = true
+				}
 				break
 			}
+		}
+
+		if allow, ok := p.RuleProcessName[name]; ok && allow {
+			filtered = true
+			break
 		}
 
 		if _, ok := p.RulePath[path]; ok {
@@ -303,10 +310,12 @@ func (p *ProcessFilter) Filter(pid int, name, path string, env map[string]string
 		}
 	}
 
-	if v, ok := p.RuleProcessName[name]; ok {
-		if v {
-			filtered = true
-		} else {
+	if allow, ok := p.RuleProcessName[name]; ok && !allow {
+		filtered = false
+	}
+
+	for k, allow := range p.RuleEnv {
+		if _, ok := env[k]; ok && !allow {
 			filtered = false
 		}
 	}

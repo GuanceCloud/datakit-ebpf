@@ -27,7 +27,7 @@ import (
 	"github.com/jessevdk/go-flags"
 	"github.com/shirou/gopsutil/process"
 
-	dkhttpflow "github.com/GuanceCloud/datakit-ebpf/internal/httpflow"
+	dkl7flow "github.com/GuanceCloud/datakit-ebpf/internal/l7flow"
 
 	"github.com/GuanceCloud/datakit-ebpf/internal/k8sinfo"
 	dknetflow "github.com/GuanceCloud/datakit-ebpf/internal/netflow"
@@ -86,12 +86,13 @@ type Option struct {
 
 	Service string `long:"service" description:"service" default:"ebpf"`
 
-	TraceServer          string `long:"trace-server" description:"eBPF trace generation server address"`
-	TraceAllProc         string `long:"trace-allprocess" description:"trace all processes directly" default:"false"`
-	TraceEnvSet          string `long:"trace-envset" description:"trace all processes containing any specified environment variable" default:""`
-	TraceProcNameDenySet string `long:"trace-namedenyset" description:"deny tracing all processes containing any specified process names" default:""`
-	TraceProcNameSet     string `long:"trace-nameset" description:"trace all processes containing any specified process names" default:""`
-	ConvTraceToDD        string `long:"conv-to-ddtrace" description:"conv trace id to ddtrace" default:"false"`
+	TraceServer        string `long:"trace-server" description:"eBPF trace generation server address"`
+	TraceAllProc       string `long:"trace-allprocess" description:"trace all processes directly" default:"false"`
+	TraceEnvList       string `long:"trace-env-list" description:"trace all processes containing any specified environment variable" default:""`
+	TraceNameList      string `long:"trace-name-list" description:"trace all processes containing any specified process names" default:""`
+	TraceEnvBlacklist  string `long:"trace-env-blacklist" description:"deny tracking any process containing any specified environment variable" default:""` //nolint:lll
+	TraceNameBlacklist string `long:"trace-name-blacklist" description:"deny tracking any process containing any specified process names" default:""`
+	ConvTraceToDD      string `long:"conv-to-ddtrace" description:"conv trace id to ddtrace" default:"false"`
 }
 
 //  Envs:
@@ -174,7 +175,7 @@ func main() { //nolint:funlen
 	dkdns.SetLogger(l)
 	dkoffset.SetLogger(l)
 	dkbash.SetLogger(l)
-	dkhttpflow.SetLogger(l)
+	dkl7flow.SetLogger(l)
 	dksysmonitor.SetLogger(l)
 
 	// duration is between 10s and 30min, if not, take the boundary value.
@@ -204,22 +205,33 @@ func main() { //nolint:funlen
 		default:
 		}
 
-		var envSet []string
-		for _, e := range strings.Split(opt.TraceEnvSet, ",") {
-			envSet = append(envSet, strings.TrimSpace(e))
+		envSet := map[string]bool{}
+		for _, e := range strings.Split(opt.TraceEnvList, ",") {
+			e = strings.TrimSpace(e)
+			if e != "" {
+				envSet[e] = true
+			}
 		}
+
+		for _, e := range strings.Split(opt.TraceEnvBlacklist, ",") {
+			e = strings.TrimSpace(e)
+			if e != "" {
+				envSet[e] = false
+			}
+		}
+
 		processSet := map[string]bool{}
 		processSet["datakit-ebpf"] = false
 		processSet["datakit"] = false
 
-		for _, p := range strings.Split(opt.TraceProcNameSet, ",") {
+		for _, p := range strings.Split(opt.TraceNameList, ",") {
 			p = strings.TrimSpace(p)
 			if p != "" {
 				processSet[p] = true
 			}
 		}
 
-		for _, p := range strings.Split(opt.TraceProcNameDenySet, ",") {
+		for _, p := range strings.Split(opt.TraceNameBlacklist, ",") {
 			p = strings.TrimSpace(p)
 			if p != "" {
 				processSet[p] = false
@@ -276,7 +288,7 @@ func main() { //nolint:funlen
 		} else {
 			go k8sinfo.AutoUpdate(ctx)
 			dknetflow.SetK8sNetInfo(k8sinfo)
-			dkhttpflow.SetK8sNetInfo(k8sinfo)
+			dkl7flow.SetK8sNetInfo(k8sinfo)
 			dkdns.SetK8sNetInfo(k8sinfo)
 		}
 
@@ -384,7 +396,7 @@ func main() { //nolint:funlen
 			if dkout.DataKitTraceServer != "" {
 				traceSvc = fmt.Sprintf("http://%s%s", dkout.DataKitTraceServer, "/v1/bpftracing")
 			}
-			tracer := dkhttpflow.NewHTTPFlowTracer(gTags, fmt.Sprintf("http://%s%s?input=",
+			tracer := dkl7flow.NewHTTPFlowTracer(gTags, fmt.Sprintf("http://%s%s?input=",
 				dkout.DataKitAPIServer, point.Network.URL())+url.QueryEscape(inputNameNetHTTP),
 				traceSvc, conv2ddID, enableTrace, procFilter,
 			)

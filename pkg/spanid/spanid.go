@@ -1,4 +1,4 @@
-// Package spans connect span
+// Package spanid define spanid
 package spanid
 
 import (

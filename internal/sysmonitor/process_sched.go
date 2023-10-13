@@ -4,20 +4,17 @@ import (
 	"bytes"
 	"context"
 	"debug/buildinfo"
+	"debug/elf"
 	"fmt"
 	"math"
 	"os"
-	"path/filepath"
-	"regexp"
 	"runtime"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 	"unsafe"
 
 	manager "github.com/DataDog/ebpf-manager"
-	ddfp "github.com/DataDog/gopsutil/process/filepath"
 	dkebpf "github.com/GuanceCloud/datakit-ebpf/internal/c"
 	"github.com/GuanceCloud/datakit-ebpf/internal/tracing"
 	"github.com/cilium/ebpf"
@@ -275,7 +272,7 @@ func (tracer *SchedTracer) ProcessSchedHandler(cpu int, data []byte,
 		}
 
 		if err := tracer.goProbeRegister(p); err != nil {
-			l.Debug(err)
+			l.Warn(err)
 		}
 	case SchedExit:
 		if tracer.processFilter != nil {
@@ -316,6 +313,8 @@ func (tracer *SchedTracer) goProbeRegister(p *pr.Process) error {
 		return nil
 	}
 
+	exeResolvePath = HostRoot(exeResolvePath)
+
 	if tracer.processFilter != nil {
 		if !tracer.processFilter.Filter(int(pid), pname, exePath, envMap) {
 			return nil
@@ -350,14 +349,19 @@ func (tracer *SchedTracer) goProbeRegister(p *pr.Process) error {
 
 	var symbolAddr uint64 = 0
 
-	if syms, err := FindSymbol(exeResolvePath, regexp.MustCompile(`^runtime\.execute$`)); err == nil {
+	elfFile, err := elf.Open(exeResolvePath)
+	if err != nil {
+		return fmt.Errorf("nnable to open elf file %s: %w", exeResolvePath, err)
+	}
+
+	if syms, err := FindSymbol(elfFile, "runtime.execute"); err == nil {
 		if len(syms) != 1 {
 			l.Debug("find symbol runtime.execute, exe %s, count %d", exeResolvePath, len(syms))
 			return nil
 		}
 		symbolAddr = syms[0].Value
 	} else {
-		sym, err := getGoUprobeSymbolFromPCLN(exeResolvePath, goVer[1] >= 20, "runtime.execute")
+		sym, err := getGoUprobeSymbolFromPCLN(elfFile, goVer[1] >= 20, "runtime.execute")
 		if err != nil {
 			l.Debug(err)
 			tracer.attachInfo.AddCannotAttach(exeResolvePath, exeModTime)
@@ -459,37 +463,4 @@ func (tracer *SchedTracer) goProbeRegister(p *pr.Process) error {
 	}
 
 	return nil
-}
-
-func resolveBinPath(pid int, fpath string) string {
-	resolver := ddfp.NewResolver(HostProc())
-	resolver = resolver.LoadPIDMounts(HostProc(strconv.Itoa(pid)))
-	return resolver.Resolve(fpath)
-}
-
-// GetEnv retrieves the environment variable key. If it does not exist it returns the default.
-// Copy from vendor/github.com/shirou/gopsutil/v3/internal/common/common.go:common.GetEnv
-func GetEnv(key string, dfault string, combineWith ...string) string {
-	value := os.Getenv(key)
-	if value == "" {
-		value = dfault
-	}
-
-	switch len(combineWith) {
-	case 0:
-		return value
-	case 1:
-		return filepath.Join(value, combineWith[0])
-	default:
-		all := make([]string, len(combineWith)+1)
-		all[0] = value
-		copy(all[1:], combineWith)
-		return filepath.Join(all...)
-	}
-}
-
-// HostProc returns the value of the host proc path.
-// Context from vendor/github.com/shirou/gopsutil/v3/internal/common/common.go:common.HostProc
-func HostProc(combineWith ...string) string {
-	return GetEnv("HOST_PROC", "/proc", combineWith...)
 }

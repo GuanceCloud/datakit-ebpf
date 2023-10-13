@@ -57,7 +57,7 @@ func (cache *ReqCache) AppendFinReq(id CPayloadID, finReq *HTTPReqFinishedInfo) 
 	cache.finReqMap[id] = finReq
 }
 
-func (cache *ReqCache) MergeReq(etrace bool, procFilter *tracing.ProcessFilter) ([]*HTTPReqFinishedInfo, []*client.Point) {
+func (cache *ReqCache) MergeReq(gtags map[string]string, etrace bool, procFilter *tracing.ProcessFilter) ([]*HTTPReqFinishedInfo, []*client.Point) {
 	cache.mutex.Lock()
 	defer cache.mutex.Unlock()
 
@@ -71,7 +71,7 @@ func (cache *ReqCache) MergeReq(etrace bool, procFilter *tracing.ProcessFilter) 
 				finReqList = append(finReqList, finReq)
 				if etrace && traceInfo.AllowTrace && traceInfo.ProcessName != "datakit" &&
 					traceInfo.ProcessName != "datakit-ebpf" {
-					if pt, err := CreateTracePoint(traceInfo, finReq); err != nil {
+					if pt, err := CreateTracePoint(gtags, traceInfo, finReq); err != nil {
 						l.Warn(err)
 					} else {
 						traceList = append(traceList, pt)

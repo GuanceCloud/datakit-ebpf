@@ -16,8 +16,34 @@ import (
 
 var goVersionRe = regexp.MustCompile(`^go(\d+)\.(\d+)`)
 
-func FindSymbol(path string, re *regexp.Regexp) ([]elf.Symbol, error) {
-	return findSymbolOffsets(path, re)
+func FindSymbol(elfFile *elf.File, fnName string) ([]elf.Symbol, error) {
+	if syms, err := elfFile.Symbols(); err != nil {
+		return nil, fmt.Errorf("failed to obtain symbol table: %w", err)
+	} else {
+		var matched []elf.Symbol
+		for _, s := range syms {
+			if elf.ST_TYPE(s.Info) == elf.STT_FUNC && s.Name == fnName {
+				matched = append(matched, s)
+			}
+		}
+		manager.SanitizeUprobeAddresses(elfFile, matched)
+		return matched, nil
+	}
+}
+
+func FindDynamicSymbol(elfFile *elf.File, fnName string) ([]elf.Symbol, error) {
+	if syms, err := elfFile.DynamicSymbols(); err != nil {
+		return nil, fmt.Errorf("failed to obtain symbol table: %w", err)
+	} else {
+		var matched []elf.Symbol
+		for _, s := range syms {
+			if elf.ST_TYPE(s.Info) == elf.STT_FUNC&0xF && s.Name == fnName {
+				matched = append(matched, s)
+			}
+		}
+		manager.SanitizeUprobeAddresses(elfFile, matched)
+		return matched, nil
+	}
 }
 
 func FindStructMemberOffset(data *dwarf.Data, typeName, memberName string) (int64, error) {
@@ -137,21 +163,19 @@ type SymLoc struct {
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-func getGoUprobeSymbolFromPCLN(fp string, patchGo20Magic bool, symName string) (*SymLoc, error) {
+func getGoUprobeSymbolFromPCLN(elfFile *elf.File, patchGo20Magic bool, symName string) (*SymLoc, error) {
 	var err error
 	var pclntab []byte
 
-	obj, err := elf.Open(fp)
-	if err != nil {
-		return nil, err
+	if elfFile == nil {
+		return nil, nil
 	}
-	defer obj.Close() //nolint:errcheck
 
-	text := obj.Section(".text")
+	text := elfFile.Section(".text")
 	if text == nil {
 		return nil, errors.New("empty .text")
 	}
-	if sect := obj.Section(".gopclntab"); sect != nil {
+	if sect := elfFile.Section(".gopclntab"); sect != nil {
 		if pclntab, err = sect.Data(); err != nil {
 			return nil, err
 		}
@@ -187,12 +211,11 @@ func getGoUprobeSymbolFromPCLN(fp string, patchGo20Magic bool, symName string) (
 
 	for _, fun := range table.Funcs {
 		if fun.Name == symName {
-			loc := &SymLoc{
+			loc := sanitizeUprobeAddresses(elfFile, &SymLoc{
 				Start: fun.Entry,
 				End:   fun.End,
 				Name:  fun.Name,
-			}
-			sanitizeUprobeAddresses(obj, loc)
+			})
 			return loc, nil
 		}
 	}
@@ -215,7 +238,7 @@ func getGoUprobeSymbolFromPCLN(fp string, patchGo20Magic bool, symName string) (
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-func sanitizeUprobeAddresses(f *elf.File, sym *SymLoc) {
+func sanitizeUprobeAddresses(f *elf.File, sym *SymLoc) *SymLoc {
 	// If the binary is a non-PIE executable, addr must be a virtual address, otherwise it must be an offset relative to
 	// the file load address. For executable (ET_EXEC) binaries and shared objects (ET_DYN), translate the virtual
 	// address to physical address in the binary file.
@@ -229,48 +252,5 @@ func sanitizeUprobeAddresses(f *elf.File, sym *SymLoc) {
 			}
 		}
 	}
-}
-
-// findSymbolOffsets - Parses the provided file and returns the offsets of the symbols that match the provided patterns
-// copy from https://github.com/DataDog/ebpf-manager/blob/main/uprobe.go#L63
-// MIT License
-//
-// # Copyright (c) 2021 Authors of Datadog
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
-func findSymbolOffsets(path string, pattern *regexp.Regexp) ([]elf.Symbol, error) {
-	f, syms, err := manager.OpenAndListSymbols(path)
-	if err != nil {
-		return nil, err
-	}
-
-	var matches []elf.Symbol
-	for _, sym := range syms {
-		if elf.ST_TYPE(sym.Info) == elf.STT_FUNC && pattern.MatchString(sym.Name) {
-			matches = append(matches, sym)
-		}
-	}
-
-	if len(matches) == 0 {
-		return nil, manager.ErrSymbolNotFound
-	}
-
-	manager.SanitizeUprobeAddresses(f, matches)
-	return matches, nil
+	return sym
 }

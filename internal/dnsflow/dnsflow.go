@@ -1,3 +1,7 @@
+//go:build linux
+// +build linux
+
+// Package dnsflow collects eBPF-network dnsflow metrics
 package dnsflow
 
 import (
@@ -5,10 +9,10 @@ import (
 	"time"
 
 	"github.com/GuanceCloud/cliutils/logger"
+	"github.com/GuanceCloud/cliutils/point"
 	"github.com/GuanceCloud/datakit-ebpf/internal/k8sinfo"
 	dkout "github.com/GuanceCloud/datakit-ebpf/internal/output"
 	"github.com/google/gopacket/afpacket"
-	client "github.com/influxdata/influxdb1-client/v2"
 )
 
 const (
@@ -115,7 +119,7 @@ func (tracer *DNSFlowTracer) readPacket(ctx context.Context, tp *afpacket.TPacke
 func (tracer *DNSFlowTracer) Run(ctx context.Context, tp *afpacket.TPacket, gTag map[string]string,
 	dnsRecord *DNSAnswerRecord, feedAddr string,
 ) {
-	mCh := make(chan []*client.Point, 256)
+	mCh := make(chan []*point.Point, 256)
 	agg := FlowAgg{}
 	go tracer.readPacket(ctx, tp)
 	go func() {
@@ -157,7 +161,7 @@ func (tracer *DNSFlowTracer) Run(ctx context.Context, tp *afpacket.TPacket, gTag
 		case m := <-mCh:
 			if len(m) == 0 {
 				l.Debug("dnsflow: no data")
-			} else if err := dkout.FeedMeasurement(feedAddr, m); err != nil {
+			} else if err := dkout.FeedPoint(feedAddr, m, false); err != nil {
 				l.Error(err)
 			}
 		}

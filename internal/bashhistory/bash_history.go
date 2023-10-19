@@ -1,3 +1,6 @@
+//go:build linux
+// +build linux
+
 // Package bashhistory collects bash history
 package bashhistory
 
@@ -13,9 +16,9 @@ import (
 
 	manager "github.com/DataDog/ebpf-manager"
 	"github.com/GuanceCloud/cliutils/logger"
+	"github.com/GuanceCloud/cliutils/point"
 	dkebpf "github.com/GuanceCloud/datakit-ebpf/internal/c"
 	dkout "github.com/GuanceCloud/datakit-ebpf/internal/output"
-	client "github.com/influxdata/influxdb1-client/v2"
 
 	"golang.org/x/sys/unix"
 )
@@ -75,14 +78,14 @@ func NewBashManger(bashReadlineEventHandler func(cpu int, data []byte,
 }
 
 type BashTracer struct {
-	ch     chan *client.Point
+	ch     chan *point.Point
 	stopCh chan struct{}
 	gTags  map[string]string
 }
 
 func NewBashTracer() *BashTracer {
 	return &BashTracer{
-		ch:     make(chan *client.Point, 32),
+		ch:     make(chan *point.Point, 32),
 		stopCh: make(chan struct{}),
 	}
 }
@@ -115,11 +118,10 @@ func (tracer *BashTracer) readlineCallBack(cpu int, data []byte,
 	mFields["message"] = fmt.Sprintf("%s pid:`%s` user:`%s` cmd:`%s`",
 		time.Now().Format(time.RFC3339), mFields["pid"], mFields["user"], mFields["cmd"])
 
-	pt, err := client.NewPoint(srcNameM, mTags, mFields, time.Now())
-	if err != nil {
-		l.Error(err)
-		return
-	}
+	kvs := point.NewTags(mTags)
+	kvs = append(kvs, point.NewKVs(mFields)...)
+	pt := point.NewPointV2(srcNameM, kvs, point.CommonLoggingOptions()...)
+
 	select {
 	case <-tracer.stopCh:
 	case tracer.ch <- pt:
@@ -128,23 +130,23 @@ func (tracer *BashTracer) readlineCallBack(cpu int, data []byte,
 
 func (tracer *BashTracer) feedHandler(ctx context.Context, datakitPostURL string, interval time.Duration) {
 	ticker := time.NewTicker(interval)
-	cache := []*client.Point{}
+	cache := []*point.Point{}
 	for {
 		select {
 		case <-ticker.C:
 			if len(cache) > 0 {
-				if err := dkout.FeedMeasurement(datakitPostURL, cache); err != nil {
+				if err := dkout.FeedPoint(datakitPostURL, cache, false); err != nil {
 					l.Error(err)
 				}
-				cache = make([]*client.Point, 0)
+				cache = make([]*point.Point, 0)
 			}
 		case pt := <-tracer.ch:
 			cache = append(cache, pt)
 			if len(cache) > 128 {
-				if err := dkout.FeedMeasurement(datakitPostURL, cache); err != nil {
+				if err := dkout.FeedPoint(datakitPostURL, cache, false); err != nil {
 					l.Error(err)
 				}
-				cache = make([]*client.Point, 0)
+				cache = make([]*point.Point, 0)
 			}
 		case <-tracer.stopCh:
 			return

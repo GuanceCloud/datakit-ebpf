@@ -1,3 +1,7 @@
+//go:build linux
+// +build linux
+
+// Package netflow collects eBPF-network netflow metrics
 package netflow
 
 import (
@@ -5,10 +9,10 @@ import (
 	"unsafe"
 
 	manager "github.com/DataDog/ebpf-manager"
+	"github.com/GuanceCloud/cliutils/point"
 	dkout "github.com/GuanceCloud/datakit-ebpf/internal/output"
 	"github.com/GuanceCloud/datakit-ebpf/internal/tracing"
 	"github.com/cilium/ebpf"
-	client "github.com/influxdata/influxdb1-client/v2"
 	"github.com/shirou/gopsutil/host"
 	"golang.org/x/net/context"
 )
@@ -239,7 +243,7 @@ func (tracer *NetFlowTracer) connCollectHanllder(ctx context.Context, connStatsM
 
 			pts := agg.ToPoint(gTags, k8sNetInfo)
 			agg.Clean()
-			tracer.feedHandler(datakitPostURL, pts)
+			tracer.feedHandler(datakitPostURL, pts, false)
 		case <-ctx.Done():
 			return
 		}
@@ -247,8 +251,8 @@ func (tracer *NetFlowTracer) connCollectHanllder(ctx context.Context, connStatsM
 }
 
 // Receive all connections collected in one cycle and send them to DataKit.
-func (tracer *NetFlowTracer) feedHandler(datakitPostURL string, pts []*client.Point) {
-	if err := dkout.FeedMeasurement(datakitPostURL, pts); err != nil {
+func (tracer *NetFlowTracer) feedHandler(datakitPostURL string, pts []*point.Point, gzip bool) {
+	if err := dkout.FeedPoint(datakitPostURL, pts, gzip); err != nil {
 		l.Debug(err)
 	}
 }

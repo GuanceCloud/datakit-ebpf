@@ -5,13 +5,12 @@ go 1.19
 require (
 	github.com/DataDog/ebpf-manager v0.2.16
 	github.com/DataDog/gopsutil v1.2.2
-	github.com/GuanceCloud/cliutils v0.1.5-0.20231013070532-7c647d5a597d
+	github.com/GuanceCloud/cliutils v0.1.6-0.20231018080152-2c936afa4f53
 	github.com/cilium/ebpf v0.11.0
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da
 	github.com/google/gopacket v1.1.19
 	github.com/grafana/pyroscope/ebpf v0.2.3
 	github.com/hashicorp/go-retryablehttp v0.7.4
-	github.com/influxdata/influxdb1-client v0.0.0-20220302092344-a9ab5670611c
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/shirou/gopsutil/v3 v3.23.9
@@ -46,6 +45,7 @@ require (
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
+	github.com/influxdata/influxdb1-client v0.0.0-20220302092344-a9ab5670611c // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
@@ -58,6 +58,7 @@ require (
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/prometheus/client_model v0.4.0 // indirect
 	github.com/prometheus/common v0.44.0 // indirect
+	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/rs/xid v1.2.1 // indirect
 	github.com/satori/go.uuid v1.2.0 // indirect
 	github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4 // indirect

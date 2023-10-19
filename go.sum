@@ -4,8 +4,8 @@ github.com/DataDog/ebpf-manager v0.2.16 h1:GYbSjuLsfau3BrHXCmXv/6b1U/zZt3npR0a8p
 github.com/DataDog/ebpf-manager v0.2.16/go.mod h1:pcPSCI1TxwCjWTg+n2/hRqt1NN9LdsufFFZYmi8CCJY=
 github.com/DataDog/gopsutil v1.2.2 h1:8lmthwyyCXa1NKiYcHlrtl9AAFdfbNI2gPcioCJcBPU=
 github.com/DataDog/gopsutil v1.2.2/go.mod h1:glkxNt/qRu9lnpmUEQwOIAXW+COWDTBOTEAHqbgBPts=
-github.com/GuanceCloud/cliutils v0.1.5-0.20231013070532-7c647d5a597d h1:T/vUMUGgr6fjjnbzHV7yhVHy6aeMTxjX/mYzEATGmko=
-github.com/GuanceCloud/cliutils v0.1.5-0.20231013070532-7c647d5a597d/go.mod h1:7VKkRM6fjyvVvnHyXXTIVxWAlL34ojb63EQ0DsDW/Is=
+github.com/GuanceCloud/cliutils v0.1.6-0.20231018080152-2c936afa4f53 h1:XQ3KpaCZt5eBf8pmWiF0Rb5qDlIo0rZarp6tn/H1txo=
+github.com/GuanceCloud/cliutils v0.1.6-0.20231018080152-2c936afa4f53/go.mod h1:+5TRDLqMjlRSj2s5GtE5Ih1aEUXZ6kpGNPHjfzOX/es=
 github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705 h1:UUppSQnhf4Yc6xGxSkoQpPhb7RVzuv5Nb1mwJ5VId9s=
 github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705/go.mod h1:3eOhrUMpNV+6aFIbp5/iudMxNCF27Vw2OZgy4xEx0Fg=
 github.com/aliyun/aliyun-oss-go-sdk v2.1.2+incompatible h1:kB3yKV/bBZLX5Rm8aOaFsM6M7ZmyOiUgAElhfn/R27c=
@@ -131,6 +131,8 @@ github.com/prometheus/client_model v0.4.0/go.mod h1:oMQmHW1/JoDwqLtg57MGgP/Fb1CJ
 github.com/prometheus/common v0.44.0 h1:+5BrQJwiBB9xsMygAB3TNvpQKOwlkc25LbISbrdOOfY=
 github.com/prometheus/common v0.44.0/go.mod h1:ofAIvZbQ1e/nugmZGz4/qCb9Ap1VoSTIO7x0VV9VvuY=
 github.com/robertkrimen/godocdown v0.0.0-20130622164427-0bfa04905481/go.mod h1:C9WhFzY47SzYBIvzFqSvHIR6ROgDo4TtdTuRaOMjF/s=
+github.com/robfig/cron/v3 v3.0.1 h1:WdRxkvbJztn8LMz/QEvLN5sBU+xKpSqwwUO1Pjr4qDs=
+github.com/robfig/cron/v3 v3.0.1/go.mod h1:eQICP3HwyT7UooqI/z+Ov+PtYAWygg1TEWWzGIFLtro=
 github.com/rogpeppe/go-internal v1.11.0 h1:cWPaGQEPrBb5/AsnsZesgZZ9yb1OQ+GOISoDNXVBh4M=
 github.com/rs/xid v1.2.1 h1:mhH9Nq+C1fY2l1XIpgxIiUOfNpRBYH1kKcr+qfKgjRc=
 github.com/rs/xid v1.2.1/go.mod h1:+uKXf+4Djp6Md1KODXJxgGQPKngRmWyn10oCKFzNHOQ=

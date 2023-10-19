@@ -1,3 +1,6 @@
+//go:build linux
+// +build linux
+
 package netflow
 
 import (
@@ -12,10 +15,10 @@ import (
 
 	manager "github.com/DataDog/ebpf-manager"
 	"github.com/GuanceCloud/cliutils/logger"
+	"github.com/GuanceCloud/cliutils/point"
 	dkebpf "github.com/GuanceCloud/datakit-ebpf/internal/c"
 	"github.com/GuanceCloud/datakit-ebpf/internal/k8sinfo"
 	"github.com/cilium/ebpf"
-	client "github.com/influxdata/influxdb1-client/v2"
 	"golang.org/x/sys/unix"
 )
 
@@ -251,7 +254,7 @@ func NewNetFlowManger(constEditor []manager.ConstantEditor, ctMap map[string]*eb
 
 func ConvConn2M(k ConnectionInfo, v ConnFullStats, name string,
 	gTags map[string]string, ptTime time.Time, pidMap map[int][2]string,
-) (*client.Point, error) {
+) (*point.Point, error) {
 	mFields := map[string]interface{}{}
 	mTags := map[string]string{}
 
@@ -337,7 +340,11 @@ func ConvConn2M(k ConnectionInfo, v ConnFullStats, name string,
 		Transport: l4proto,
 	}, mTags)
 
-	return client.NewPoint(name, mTags, mFields, ptTime)
+	kvs := point.NewTags(mTags)
+	kvs = append(kvs, point.NewKVs(mFields)...)
+	pt := point.NewPointV2(name, kvs, append(
+		point.CommonLoggingOptions(), point.WithTime(ptTime))...)
+	return pt, nil
 }
 
 func IsIncomingFromK8s(k8sNetInfo *k8sinfo.K8sNetInfo, srcIP string,

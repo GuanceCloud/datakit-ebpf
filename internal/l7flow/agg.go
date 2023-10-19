@@ -246,7 +246,6 @@ func (agg *FlowAgg) ToPoint(tags map[string]string, k8sInfo *k8sinfo.K8sNetInfo)
 		if pt, err := kv2point(&k, v, pTime, tags, k8sInfo); err != nil {
 			l.Debug(err)
 		} else {
-			l.Debug(pt)
 			result = append(result, pt)
 		}
 	}

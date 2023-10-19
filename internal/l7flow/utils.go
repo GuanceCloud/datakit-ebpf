@@ -175,6 +175,17 @@ func CreateTracePoint(gtags map[string]string, traceInfo *tracing.TraceInfo,
 
 	direction := httpStat.HTTPStats.Direction
 
+	var spTyp string
+
+	switch direction {
+	case DirectionIncoming:
+		spTyp = "entry"
+	case DirectionOutgoing:
+		spTyp = "exit"
+	default:
+		spTyp = "unknow"
+	}
+
 	spanType := traceInfo.ESpanType
 
 	var aSampled int64
@@ -209,7 +220,7 @@ func CreateTracePoint(gtags map[string]string, traceInfo *tracing.TraceInfo,
 		"http_route":       traceInfo.Path,
 		"operation":        "HTTP",
 		"pid":              int64(traceInfo.PidTid >> 32),
-		"span_type":        "local",
+		"span_type":        spTyp,
 		"start":            traceInfo.TS / 1000,
 		"duration":         int64(httpStat.HTTPStats.RespTS-httpStat.HTTPStats.ReqTS) / 1000,
 		"status":           httpCode2Status(int(httpStat.HTTPStats.RespCode)),

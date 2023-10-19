@@ -166,6 +166,11 @@ struct ssl_read_args
     __s32 num;
     __s32 _pad0;
 
+    __u32 copied_seq;
+    __u32 write_seq;
+
+    void *skt;
+
     __u64 ts;
 };
 

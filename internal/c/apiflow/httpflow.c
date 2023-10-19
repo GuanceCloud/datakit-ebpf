@@ -773,10 +773,39 @@ SEC("uprobe/SSL_read")
 int uprobe__SSL_read(struct pt_regs *ctx)
 {
     __u64 pid_tgid = bpf_get_current_pid_tgid();
+
     struct ssl_read_args args = {0};
     args.ctx = (void *)PT_REGS_PARM1(ctx);
     args.buf = (void *)PT_REGS_PARM2(ctx);
     args.num = (__s32)PT_REGS_PARM3(ctx);
+
+    void *ssl_ctx = args.ctx;
+    __u64 *fd_ptr = (__u64 *)bpf_map_lookup_elem(&bpfmap_ssl_ctx_sockfd, &ssl_ctx);
+    if (fd_ptr == NULL)
+    {
+        return 0;
+    }
+    struct task_struct *task = bpf_get_current_task();
+    struct socket *skt = get_socket_from_fd(task, *fd_ptr);
+    if (skt == NULL)
+    {
+        return 0;
+    }
+
+    // socket addr
+    args.skt = skt;
+
+    struct sock *sk = NULL;
+    enum sock_type sktype = 0;
+
+    if (get_sock_from_skt(skt, &sk, &sktype) != 0 || sktype != SOCK_STREAM)
+    {
+        return 0;
+    }
+
+    args.copied_seq = read_copied_seq(sk);
+    args.write_seq = read_write_seq(sk);
+
     args.ts = bpf_ktime_get_ns();
 
     bpf_map_update_elem(&bpfmap_ssl_read_args, &pid_tgid, &args, BPF_ANY);
@@ -795,34 +824,21 @@ int uretprobe__SSL_read(struct pt_regs *ctx)
         return 0;
     }
 
-    void *ssl_ctx = args->ctx;
-    __u64 *fd_ptr = (__u64 *)bpf_map_lookup_elem(&bpfmap_ssl_ctx_sockfd, &ssl_ctx);
-    if (fd_ptr == NULL)
-    {
-        return 0;
-    }
-
-    struct task_struct *task = bpf_get_current_task();
-
-    struct socket *skt = get_socket_from_fd(task, *fd_ptr);
-
-    if (skt == NULL)
-    {
-        return 0;
-    }
-
     if (args->num <= 0)
     {
         goto clean;
     }
 
     struct layer7_http stats = {0};
-    req_resp_t req_resp = checkHTTPS(skt, args->buf,
+    req_resp_t req_resp = checkHTTPS(args->skt, args->buf,
                                      &conn, &stats, args->num);
     if (req_resp == HTTP_REQ_UNKNOWN)
     {
         goto clean;
     }
+
+    rec_seq(&stats, args->copied_seq, args->write_seq, req_resp, MSG_READ);
+
     upate_req_payload_id(&stats, pid_tgid, args->ts);
 
     // If it is resp, this buffer is not used.
@@ -865,8 +881,15 @@ int uprobe__SSL_write(struct pt_regs *ctx)
         return 0;
     }
 
-    __u64 ts = bpf_ktime_get_ns();
+    struct sock *sk = NULL;
+    enum sock_type sktype = 0;
 
+    if (get_sock_from_skt(skt, &sk, &sktype) != 0 || sktype != SOCK_STREAM)
+    {
+        return 0;
+    }
+
+    __u64 ts = bpf_ktime_get_ns();
     struct connection_info conn = {0};
     struct layer7_http stats = {0};
 
@@ -881,6 +904,11 @@ int uprobe__SSL_write(struct pt_regs *ctx)
     {
         goto clean;
     }
+
+    __u32 copied_seq = read_copied_seq(sk);
+    __u32 write_seq = read_write_seq(sk);
+
+    rec_seq(&stats, copied_seq, write_seq, req_resp, MSG_WRITE);
 
     upate_req_payload_id(&stats, pid_tgid, ts);
 

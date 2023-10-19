@@ -172,17 +172,7 @@ func ParseHTTP1xHeader(payload []byte, ts int64, conv2dd bool) (*TraceInfo, bool
 		}
 	}
 
-	if tid, ok := tInfo.Headers["x-datadog-trace-id"]; ok {
-		tInfo.TraceID.Low = uint64(DecTraceOrSpanid2ID64(tid))
-		if psid, ok := tInfo.Headers["x-datadog-parent-id"]; ok {
-			tInfo.ParentSpanID = DecTraceOrSpanid2ID64(psid)
-		}
-		if v, ok := tInfo.Headers["x-datadog-sampling-priority"]; ok {
-			tInfo.ASpanSampled = sampledDataDog(v)
-		}
-		tInfo.HexEncode = false
-		tInfo.HaveTracID = true
-	} else if v, ok := tInfo.Headers["traceparent"]; ok {
+	if v, ok := tInfo.Headers["traceparent"]; ok {
 		traceParent := strings.Split(v, "-")
 		if len(traceParent) == 4 {
 			tInfo.ASpanSampled = sampledW3C(traceParent[3])
@@ -198,6 +188,16 @@ func ParseHTTP1xHeader(payload []byte, ts int64, conv2dd bool) (*TraceInfo, bool
 			prtidstr := traceParent[2]
 			tInfo.ParentSpanID = HexSpanid2ID64(prtidstr)
 		}
+	} else if tid, ok := tInfo.Headers["x-datadog-trace-id"]; ok {
+		tInfo.TraceID.Low = uint64(DecTraceOrSpanid2ID64(tid))
+		if psid, ok := tInfo.Headers["x-datadog-parent-id"]; ok {
+			tInfo.ParentSpanID = DecTraceOrSpanid2ID64(psid)
+		}
+		if v, ok := tInfo.Headers["x-datadog-sampling-priority"]; ok {
+			tInfo.ASpanSampled = sampledDataDog(v)
+		}
+		tInfo.HexEncode = false
+		tInfo.HaveTracID = true
 	}
 
 	return tInfo, true

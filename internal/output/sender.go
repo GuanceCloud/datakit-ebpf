@@ -2,16 +2,16 @@ package output
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/GuanceCloud/cliutils/logger"
+	"github.com/GuanceCloud/cliutils/point"
 	"github.com/hashicorp/go-retryablehttp"
-	client "github.com/influxdata/influxdb1-client/v2"
 )
 
 var DataKitAPIServer = "0.0.0.0:9529"
@@ -38,7 +38,8 @@ func Init(logger *logger.Logger) {
 
 type task struct {
 	url  string
-	data []*client.Point // lineproto
+	data []*point.Point
+	gzip bool
 }
 
 type Sender struct {
@@ -76,44 +77,89 @@ func (sender *Sender) runner(ctx context.Context) {
 }
 
 func (sender *Sender) request(data *task) error {
-	if data == nil {
+	if len(data.data) == 0 {
 		return nil
 	}
 
-	l := len(data.data)
-
-	for i := 0; i < l/maxPtSendCount; i++ {
-		if err := sender.doReq(data.url, data.data[i*maxPtSendCount:(i+1)*maxPtSendCount]); err != nil {
-			return fmt.Errorf("fail and stop: data[%d:%d]: %w", i*maxPtSendCount, (i+1)*maxPtSendCount, err)
-		}
+	if err := sender.doReq(data); err != nil {
+		return fmt.Errorf("failed to send data: total %d pts: %w", len(data.data), err)
 	}
 
-	if l%maxPtSendCount != 0 {
-		if err := sender.doReq(data.url, data.data[l-l%maxPtSendCount:]); err != nil {
-			return fmt.Errorf("fail and stop: data[%d:]: %w", l-l%maxPtSendCount, err)
-		}
-	}
 	return nil
 }
 
-func (sender *Sender) doReq(url string, data []*client.Point) error {
-	if len(data) == 0 || url == "" {
+func gzipData(data []byte) ([]byte, error) {
+	var z bytes.Buffer
+	zw := gzip.NewWriter(&z)
+
+	if _, err := zw.Write(data); err != nil {
+		return nil, err
+	}
+
+	if err := zw.Flush(); err != nil {
+		return nil, err
+	}
+
+	if err := zw.Close(); err != nil {
+		return nil, err
+	}
+	return z.Bytes(), nil
+}
+
+func (sender *Sender) doReq(task *task) error {
+	if len(task.data) == 0 || task.url == "" {
 		return nil
 	}
 	if sender.httpCli == nil {
 		return fmt.Errorf("no http client")
 	}
-	dataStr := []string{}
-	for _, pt := range data {
-		if pt != nil {
-			dataStr = append(dataStr, pt.String())
+
+	enc := point.GetEncoder(point.WithEncEncoding(point.Protobuf),
+		point.WithEncBatchSize(maxPtSendCount))
+	defer point.PutEncoder(enc)
+
+	bufLi, err := enc.Encode(task.data)
+	if err != nil {
+		return fmt.Errorf("encode data failed: %w", err)
+	}
+
+	for idx := range bufLi {
+		if err := postData(bufLi[idx], point.Protobuf, task.gzip, task.url, sender); err != nil {
+			l.Warnf("post data: %w", err)
 		}
 	}
-	reader := strings.NewReader(strings.Join(dataStr, "\n"))
+
+	return nil
+}
+
+func postData(buf []byte, enc point.Encoding, gzip bool,
+	url string, sender *Sender,
+) error {
+	if sender == nil {
+		return nil
+	}
+
+	if gzip {
+		if gzipBuf, err := gzipData(buf); err != nil {
+			return fmt.Errorf("gzip data error: %w", err)
+		} else {
+			buf = gzipBuf
+		}
+	}
+
+	reader := bytes.NewReader(buf)
+
 	req, err := http.NewRequest("POST", url, reader)
 	if err != nil {
 		return err
 	}
+
+	req.Header.Set("Content-Length", fmt.Sprintf("%d", len(buf)))
+	req.Header.Set("Content-Type", enc.HTTPContentType())
+	if gzip {
+		req.Header.Set("Content-Encoding", "gzip")
+	}
+
 	retryReq, err := retryablehttp.FromRequest(req)
 	if err != nil {
 		return fmt.Errorf("retryablehttp.FromRequest: %w", err)
@@ -129,7 +175,6 @@ func (sender *Sender) doReq(url string, data []*client.Point) error {
 		return fmt.Errorf("url %s, http status code: %d",
 			url, resp.StatusCode)
 	}
-
 	return nil
 }
 
@@ -139,13 +184,14 @@ type ExternalLastErr struct {
 	ErrContent string `json:"err_content"`
 }
 
-func FeedMeasurement(url string, data []*client.Point) error {
+func FeedPoint(url string, data []*point.Point, gzip bool) error {
 	if _sender == nil {
 		return fmt.Errorf("sender not init")
 	}
 	_sender.ch <- &task{
 		url:  url,
 		data: data,
+		gzip: gzip,
 	}
 	return nil
 }

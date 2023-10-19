@@ -1,3 +1,6 @@
+//go:build linux
+// +build linux
+
 package netflow
 
 import (
@@ -5,8 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/GuanceCloud/cliutils/point"
 	"github.com/GuanceCloud/datakit-ebpf/internal/k8sinfo"
-	client "github.com/influxdata/influxdb1-client/v2"
 )
 
 type BaseKey struct {
@@ -61,7 +64,7 @@ func calLatency(l []int64) int64 {
 
 func kv2point(key *aggKey, value *aggValue, pTime time.Time,
 	addTags map[string]string, k8sNetInfo *k8sinfo.K8sNetInfo,
-) (*client.Point, error) {
+) (*point.Point, error) {
 	tags := map[string]string{
 		"family": key.family,
 
@@ -129,7 +132,13 @@ func kv2point(key *aggKey, value *aggValue, pTime time.Time,
 	}
 
 	tags = AddK8sTags2Map(k8sNetInfo, &key.BaseKey, tags)
-	return client.NewPoint(srcNameM, tags, fields, pTime)
+
+	kvs := point.NewTags(tags)
+	kvs = append(kvs, point.NewKVs(fields)...)
+	pt := point.NewPointV2(srcNameM, kvs, append(
+		point.CommonLoggingOptions(), point.WithTime(pTime))...)
+
+	return pt, nil
 }
 
 type FlowAgg struct {
@@ -247,8 +256,8 @@ func (agg *FlowAgg) Append(info ConnectionInfo, stats ConnFullStats) error {
 
 func (agg *FlowAgg) ToPoint(tags map[string]string,
 	k8sInfo *k8sinfo.K8sNetInfo,
-) []*client.Point {
-	var result []*client.Point
+) []*point.Point {
+	var result []*point.Point
 
 	pTime := time.Now()
 	for k, v := range agg.data {

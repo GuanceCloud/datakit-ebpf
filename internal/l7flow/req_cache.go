@@ -1,10 +1,13 @@
+//go:build linux
+// +build linux
+
 package httpflow
 
 import (
 	"sync"
 
+	"github.com/GuanceCloud/cliutils/point"
 	"github.com/GuanceCloud/datakit-ebpf/internal/tracing"
-	client "github.com/influxdata/influxdb1-client/v2"
 	"github.com/shirou/gopsutil/host"
 )
 
@@ -57,12 +60,12 @@ func (cache *ReqCache) AppendFinReq(id CPayloadID, finReq *HTTPReqFinishedInfo) 
 	cache.finReqMap[id] = finReq
 }
 
-func (cache *ReqCache) MergeReq(gtags map[string]string, etrace bool, procFilter *tracing.ProcessFilter) ([]*HTTPReqFinishedInfo, []*client.Point) {
+func (cache *ReqCache) MergeReq(gtags map[string]string, etrace bool, procFilter *tracing.ProcessFilter) ([]*HTTPReqFinishedInfo, []*point.Point) {
 	cache.mutex.Lock()
 	defer cache.mutex.Unlock()
 
 	var finReqList []*HTTPReqFinishedInfo
-	var traceList []*client.Point
+	var traceList []*point.Point
 	for id, finReq := range cache.finReqMap {
 		if traceInfo, ok := cache.pathMap[id]; ok {
 			if traceInfo != nil {

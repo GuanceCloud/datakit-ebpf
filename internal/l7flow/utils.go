@@ -1,3 +1,6 @@
+//go:build linux
+// +build linux
+
 package httpflow
 
 import (
@@ -7,11 +10,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/GuanceCloud/cliutils/point"
 	"github.com/GuanceCloud/datakit-ebpf/internal/k8sinfo"
 	dknetflow "github.com/GuanceCloud/datakit-ebpf/internal/netflow"
 	"github.com/GuanceCloud/datakit-ebpf/internal/tracing"
 	"github.com/GuanceCloud/datakit-ebpf/pkg/spanid"
-	client "github.com/influxdata/influxdb1-client/v2"
 	"github.com/spf13/cast"
 )
 
@@ -161,7 +164,7 @@ func ConnNotNeedToFilter(conn ConnectionInfo) bool {
 
 func CreateTracePoint(gtags map[string]string, traceInfo *tracing.TraceInfo,
 	httpStat *HTTPReqFinishedInfo,
-) (*client.Point, error) {
+) (*point.Point, error) {
 	var threadTraceID int64
 	var reqSeq int64
 	var respSeq int64
@@ -271,11 +274,12 @@ func CreateTracePoint(gtags map[string]string, traceInfo *tracing.TraceInfo,
 		fields["app_parent_id"] = aparentidstr
 	}
 
-	if pt, err := client.NewPoint("ebpf", nil, fields, time.Unix(0, traceInfo.TS)); err != nil {
-		return nil, err
-	} else {
-		return pt, nil
-	}
+	kvs := point.NewKVs(fields)
+	pt := point.NewPointV2("ebpf", kvs, append(
+		point.CommonLoggingOptions(),
+		point.WithTime(time.Unix(0, traceInfo.TS)))...)
+
+	return pt, nil
 }
 
 func httpCode2Status(code int) string {

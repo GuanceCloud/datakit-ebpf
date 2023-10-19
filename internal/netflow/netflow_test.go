@@ -1,3 +1,6 @@
+//go:build linux
+// +build linux
+
 package netflow
 
 import (
@@ -372,8 +375,8 @@ func TestConvConn2M(t *testing.T) {
 			t.Error(err)
 			continue
 		}
-		tags := pt.Tags()
-		fields, _ := pt.Fields()
+		tags := pt.MapTags()
+		fields := pt.InfluxFields()
 		delete(fields, "message")
 		if len(fields) != len(v.result.fields) {
 			t.Error("fields length not equal")

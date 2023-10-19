@@ -1,3 +1,7 @@
+//go:build linux
+// +build linux
+
+// Package httpflow collects http(s) request flow
 package httpflow
 
 import (
@@ -12,6 +16,7 @@ import (
 
 	manager "github.com/DataDog/ebpf-manager"
 	"github.com/GuanceCloud/cliutils/logger"
+	"github.com/GuanceCloud/cliutils/point"
 	dkebpf "github.com/GuanceCloud/datakit-ebpf/internal/c"
 	dknetflow "github.com/GuanceCloud/datakit-ebpf/internal/netflow"
 	dkout "github.com/GuanceCloud/datakit-ebpf/internal/output"
@@ -21,7 +26,6 @@ import (
 	"github.com/GuanceCloud/datakit-ebpf/pkg/spanid"
 	"github.com/cilium/ebpf"
 	"github.com/google/gopacket/afpacket"
-	client "github.com/influxdata/influxdb1-client/v2"
 	"github.com/shirou/gopsutil/host"
 	"golang.org/x/sys/unix"
 )
@@ -460,13 +464,13 @@ func (tracer *HTTPFlowTracer) feedHandler(ctx context.Context, interval time.Dur
 		case <-ticker.C:
 			pts := agg.ToPoint(tracer.gTags, k8sNetInfo)
 			agg.Clean()
-			if err := feed(tracer.datakitPostURL, pts); err != nil {
+			if err := feed(tracer.datakitPostURL, pts, false); err != nil {
 				l.Error(err)
 			}
 
 		case <-mergeTicker.C:
 			reqs, pts := _reqCache.MergeReq(tracer.gTags, eTrace, tracer.procFilter)
-			if err := feed(tracer.tracePostURL, pts); err != nil {
+			if err := feed(tracer.tracePostURL, pts, true); err != nil {
 				l.Error(err)
 			}
 			for _, req := range reqs {
@@ -484,11 +488,11 @@ func (tracer *HTTPFlowTracer) feedHandler(ctx context.Context, interval time.Dur
 	}
 }
 
-func feed(url string, data []*client.Point) error {
+func feed(url string, data []*point.Point, gzip bool) error {
 	if len(data) == 0 {
 		return nil
 	}
-	if err := dkout.FeedMeasurement(url, data); err != nil {
+	if err := dkout.FeedPoint(url, data, gzip); err != nil {
 		return err
 	}
 	return nil

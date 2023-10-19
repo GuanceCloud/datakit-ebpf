@@ -1,3 +1,6 @@
+//go:build linux
+// +build linux
+
 package offset
 
 // #include "../c/offset_guess/offset.h"

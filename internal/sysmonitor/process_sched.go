@@ -359,7 +359,7 @@ func (tracer *SchedTracer) goProbeRegister(p *pr.Process) error {
 
 	if syms, err := FindSymbol(elfFile, "runtime.execute"); err == nil {
 		if len(syms) != 1 {
-			l.Debug("find symbol runtime.execute, exe %s, count %d", exeResolvePath, len(syms))
+			l.Debugf("find symbol runtime.execute, exe %s, count %d", exeResolvePath, len(syms))
 			return nil
 		}
 		symbolAddr = syms[0].Value

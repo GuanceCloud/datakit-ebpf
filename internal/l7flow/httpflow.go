@@ -339,7 +339,7 @@ func (tracer *HTTPFlowTracer) Run(ctx context.Context, constEditor []manager.Con
 
 	if r != nil {
 		r.ScanAndUpdate()
-		r.Monitor(ctx, time.Second)
+		r.Monitor(ctx, time.Second*30)
 	}
 
 	go func() {

@@ -37,7 +37,7 @@ func (cache *ReqCache) AppendPayload(payloadID CPayloadID, info *tracing.TraceIn
 	cache.pathMap[payloadID] = info
 }
 
-const connExpirationInterval = 91 // 91s
+const connExpirationInterval = 60 * 10 // 10min
 
 func reqExpr(uptimeS, tsNs uint64) bool {
 	tsS := tsNs / 1e9
